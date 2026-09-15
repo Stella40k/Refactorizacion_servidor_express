@@ -1,6 +1,6 @@
-import 'dotenv/config';
-import express, { Request, Response } from 'express';
-import mongoose, { Schema, model } from 'mongoose';
+import "dotenv/config";
+import express, { Request, Response } from "express";
+import mongoose, { Schema, model } from "mongoose";
 
 const app = express();
 app.use(express.json());
@@ -11,31 +11,45 @@ const employeeSchema = new Schema(
     position: { type: String, required: true },
     baseSalary: { type: Number, required: true },
     yearsOfService: { type: Number, required: true },
-    finalSalary: { type: Number, required: true }
+    finalSalary: { type: Number, required: true },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
-const Employee = model('Employee', employeeSchema);
+const Employee = model("Employee", employeeSchema);
 
-app.post('/employees', async (req: Request, res: Response) => {
+//en este bloque esta:
+//el req.body q es el cuerpo de la solicitud
+//calcula y aplica las reglas de negocio (el salario finañ)
+//valida datos de entrada
+//habla con la bd
+//y encima maneja los errores y responde al cliente
+app.post("/employees", async (req: Request, res: Response) => {
   try {
     const { name, position, baseSalary, yearsOfService } = req.body;
 
     if (!name || !position) {
-      return res.status(400).json({ message: 'Nombre y puesto son obligatorios' });
+      return res
+        .status(400)
+        .json({ message: "Nombre y puesto son obligatorios" });
     }
 
-    if (typeof baseSalary !== 'number' || baseSalary <= 0) {
-      return res.status(400).json({ message: 'El salario base debe ser mayor a 0' });
+    if (typeof baseSalary !== "number" || baseSalary <= 0) {
+      return res
+        .status(400)
+        .json({ message: "El salario base debe ser mayor a 0" });
     }
 
     if (
-      typeof yearsOfService !== 'number' ||
+      typeof yearsOfService !== "number" ||
       yearsOfService < 0 ||
       !Number.isInteger(yearsOfService)
     ) {
-      return res.status(400).json({ message: 'La antigüedad debe ser un entero mayor o igual a 0' });
+      return res
+        .status(400)
+        .json({
+          message: "La antigüedad debe ser un entero mayor o igual a 0",
+        });
     }
 
     const bonus = baseSalary * 0.02 * yearsOfService;
@@ -46,54 +60,71 @@ app.post('/employees', async (req: Request, res: Response) => {
       position,
       baseSalary,
       yearsOfService,
-      finalSalary
+      finalSalary,
     });
 
-    console.log(`Empleado creado: ${employee.name} - salario final: ${employee.finalSalary}`);
+    console.log(
+      `Empleado creado: ${employee.name} - salario final: ${employee.finalSalary}`,
+    );
     return res.status(201).json(employee);
   } catch (error) {
     console.error(error);
-    return res.status(500).json({ message: 'Error interno del servidor' });
+    return res.status(500).json({ message: "Error interno del servidor" });
   }
 });
 
-app.get('/employees', async (_req: Request, res: Response) => {
+app.get("/employees", async (_req: Request, res: Response) => {
   try {
     const employees = await Employee.find().sort({ createdAt: -1 });
     return res.json(employees);
   } catch (error) {
     console.error(error);
-    return res.status(500).json({ message: 'Error interno del servidor' });
+    return res.status(500).json({ message: "Error interno del servidor" });
   }
 });
 
-app.get('/employees/:id', async (req: Request, res: Response) => {
+app.get("/employees/:id", async (req: Request, res: Response) => {
   try {
     const employee = await Employee.findById(req.params.id);
 
     if (!employee) {
-      return res.status(404).json({ message: 'Empleado no encontrado' });
+      return res.status(404).json({ message: "Empleado no encontrado" });
     }
 
     return res.json(employee);
   } catch (error) {
     console.error(error);
-    return res.status(500).json({ message: 'Error interno del servidor' });
+    return res.status(500).json({ message: "Error interno del servidor" });
   }
 });
 
 const PORT = Number(process.env.PORT ?? 3000);
-const MONGO_URI = process.env.MONGO_URI ?? 'mongodb://localhost:27017/employees_db';
+const MONGO_URI =
+  process.env.MONGO_URI ?? "mongodb://localhost:27017/employees_db";
 
 mongoose
   .connect(MONGO_URI)
   .then(() => {
-    console.log('MongoDB conectado');
+    console.log("MongoDB conectado");
     app.listen(PORT, () => {
       console.log(`Servidor escuchando en http://localhost:${PORT}`);
     });
   })
   .catch((error) => {
-    console.error('No se pudo conectar a MongoDB', error);
+    console.error("No se pudo conectar a MongoDB", error);
     process.exit(1);
   });
+
+//se cconstruira una arq siguiendo un flujo de peticiones con un camino unidireccional
+
+//cliente -> rutas (q solo definen las url y metodos) -> controladores (extrae los req.bodys/parametros, valida y responde) -> servicios (regla de negocios pura: calculo del bono y asi) -> repositoriso(habla cpn la bd)
+
+//esto seria una arq en capas, lo podemos identificar por como estan
+// agrupadas las carpetas (especificas y con sus responsabilidades cada una.
+//  No por modulos). Se comunican entre ellas de forma lineal
+
+//esta arq es conveniente y muy usada pq:
+//*Mantenible: un cambio en la bd o en librerias no rompera las reglas de negicios
+//*Testeable:podemos probar las reglas de negocios (serivicios) sin necesidad de un servidor o una bd reañ
+//*Escalable: podemos trabajarlo en grupo de forma paralelas en cada capa sin hacer conflictos
+//*Reutulizables: los services se peden re usar con otros puntos de entradas
