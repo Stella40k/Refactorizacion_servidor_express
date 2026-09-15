@@ -1,3 +1,4 @@
+import { Schema, model } from "mongoose";
 //aislamiento de datos. Se extrae todo lo q dependa de mongoosee
 //del server, osea, todo lo q sea hablar con la bd estara aca
 
@@ -8,7 +9,7 @@
 //sin la interfas ts no sabra q propiedades hay en la variable de employee. Saltaria un any.
 //con la interfas le digo a ts como debe ser un empleado, is o si
 //estas 5 propiedades y con estos tipos especificos. Tambien a
-interface IEmployee {
+export interface IEmployee {
   name: string;
   position: string;
   baseSalary: number;
@@ -19,3 +20,19 @@ interface IEmployee {
 //con esto tambien puedo acceder a todas las claves valor q hay dentro de la interfas
 //y avisara sobre errores o asy. Esa misma interfaz se puede usar en otros, no depende
 //  de tipos suno de contratos explicitos
+
+//el esquema es para la configuracion de mongoose usa para
+//cuando la app ya esta funcionando  al usar <IEmployee> ts comprueba q los campos se definen
+//dentro del objeto coincidan con la interfaz.
+const employeeSchema = new Schema<IEmployee>(
+  {
+    name: { type: String, required: true },
+    position: { type: String, required: true },
+    baseSalary: { type: Number, required: true },
+    yearsOfService: { type: Number, required: true },
+    finalSalary: { type: Number, required: true },
+  },
+  {
+    timestamps: true,
+  },
+);
